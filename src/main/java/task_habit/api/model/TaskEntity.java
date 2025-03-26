@@ -31,6 +31,8 @@ public class TaskEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-
     public TaskEntity() {}
+    public TaskEntity(User user) {
+        this.user = user;
+    }
 }
