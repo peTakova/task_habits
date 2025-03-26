@@ -7,9 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.config.JwtUtil;
+import task_habit.api.model.HabitEntity;
 import task_habit.api.model.TaskEntity;
-import task_habit.api.model.TaskStatus;
 import task_habit.api.model.User;
+import task_habit.api.service.HabitService;
 import task_habit.api.service.TaskService;
 import task_habit.api.service.UserService;
 
@@ -23,10 +24,12 @@ public class UserController {
     private PasswordEncoder passwordEncoder;
     private final List<User> users = new ArrayList<>();
     private TaskService taskService;
+    private HabitService habitService;
 
-    public UserController(UserService userService, TaskService taskService) {
+    public UserController(UserService userService, TaskService taskService, HabitService habitService) {
         this.userService = userService;
         this.taskService = taskService;
+        this.habitService = habitService;
     }
 
     //user endpoints------------------------------------------------------------------------------------
@@ -92,8 +95,8 @@ public class UserController {
         }
     }
 
-    @GetMapping("/{usersId}/tasks")
-    public ResponseEntity<String> getAllUserTasks(@PathVariable Long userId) {
+    @GetMapping("/tasks/{usersId}")
+    public ResponseEntity<String> getAllUserTasks(@PathVariable ("usersId") Long userId) {
         try {
             List<TaskEntity> tasks = this.taskService.getUserTasks(userId);
             if (tasks.isEmpty()) {
@@ -140,6 +143,53 @@ public class UserController {
     //-----------------------------------------------------------------------------------------------------
 
     //habit endpoints
+
+    @GetMapping("/habits/{usersId}")
+    public ResponseEntity<String> getAllUserHabits(@PathVariable ("usersId") Long userId) {
+        try {
+            List<HabitEntity> habits = this.habitService.getUserHabits(userId);
+            if (habits.isEmpty()) {
+                return new ResponseEntity<>("No tasks found for user " + userId, HttpStatus.OK);
+            }
+            return new ResponseEntity<>(habits.toString(), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error retrieving tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    @GetMapping("/{usersId}/habit/{habitId}")
+    public ResponseEntity<String> getHabit(@PathVariable Long userId, @PathVariable Long habitId) {
+        try {
+            HabitEntity habit = this.habitService.getHabit(userId, habitId);
+            return new ResponseEntity<>(habit.toString(), HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{usersId}/habit/{habitId}")
+    public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long taskId, @RequestBody HabitEntity updatedHabit) {
+        try {
+            this.habitService.updateHabit(userId, taskId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
+            return new ResponseEntity<>("Task updated successfully", HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
+
+
+    @DeleteMapping("/{usersId}/habit/{habitId}")
+    public ResponseEntity<String> deleteHabit (@PathVariable Long userId, @PathVariable Long habitId) {
+        try {
+            this.habitService.deleteHabitById(userId, habitId);
+            return new ResponseEntity<>("Task deleted successfully", HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+
+    }
+
 
     //-----------------------------------------------------------------------------------------------------
 

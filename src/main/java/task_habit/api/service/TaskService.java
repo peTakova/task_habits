@@ -29,9 +29,9 @@ public class TaskService {
     }
 
     public List<TaskEntity> getUserTasks(Long userId) {
-        return this.userRepository.findById(userId)
-                .map(User::getTasks)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = this.userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+        return this.taskRepository.findByUserId(userId);
     }
 
     public void deleteTaskById(Long userId, Long taskId) {
