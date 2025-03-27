@@ -9,7 +9,7 @@ import java.util.List;
 
 @Entity
 @Data
-@Table(name = "TaskEntity")
+@Table(name = "task_entity")
 public class TaskEntity {
 
     @Id

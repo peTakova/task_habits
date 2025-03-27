@@ -7,7 +7,7 @@ import java.util.Date;
 
 @Entity
 @Data
-@Table(name = "HabitEntity")
+@Table(name = "habit_entity")
 public class HabitEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

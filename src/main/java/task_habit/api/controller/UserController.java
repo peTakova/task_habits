@@ -7,11 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.config.JwtUtil;
-import task_habit.api.model.HabitEntity;
-import task_habit.api.model.TaskEntity;
+import task_habit.api.dto.UserDTO;
 import task_habit.api.model.User;
-import task_habit.api.service.HabitService;
-import task_habit.api.service.TaskService;
 import task_habit.api.service.UserService;
 
 import java.util.*;
@@ -22,31 +19,34 @@ public class UserController {
     private final UserService userService;
 @Autowired
     private PasswordEncoder passwordEncoder;
-    private final List<User> users = new ArrayList<>();
-    private TaskService taskService;
-    private HabitService habitService;
 
-    public UserController(UserService userService, TaskService taskService, HabitService habitService) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.taskService = taskService;
-        this.habitService = habitService;
     }
 
-    //user endpoints------------------------------------------------------------------------------------
     @GetMapping("/all")
-    public List<User> getAllUsers() {
-        return this.userService.getAllUsers();
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        try {
+            List<UserDTO> users = this.userService.getAllUsers();
+            if (users.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(users, HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("findById/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        Optional<User> user = this.userService.getUserById(id);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
+        Optional<User> userOpt = this.userService.getUserById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), user.getEmail());
+            return ResponseEntity.ok(userDTO);
         } else {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Používateľ s tymto id " + id + " neexistuje.");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(null);
         }
     }
 
@@ -58,7 +58,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
         user.setPassword(this.passwordEncoder.encode(user.getPassword()));
-        this.userService.saveUser(user);
+        this.userService.createUser(user);
 
         String token = JwtUtil.generateToken(user.getEmail() );
         //return ResponseEntity.ok(Map.of("message", "Registrácia úspešná", "token", token));
@@ -80,119 +80,6 @@ public class UserController {
                     .body("Používateľ s ID " + id + " neexistuje.");
         }
     }
-    //------------------------------------------------------------------------------------------------------
-
-
-    //task endpoints----------------------------------------------------------------------------------------
-
-    @PatchMapping("/{usersId}/tasks/{taskId}/complete")
-    public ResponseEntity<String> markTaskCompleted(@PathVariable Long userId,@PathVariable Long taskId) {
-        try {
-            this.taskService.markCompleted(taskId, userId);
-            return new ResponseEntity<>("Task marked as completed", HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @GetMapping("/tasks/{usersId}")
-    public ResponseEntity<String> getAllUserTasks(@PathVariable ("usersId") Long userId) {
-        try {
-            List<TaskEntity> tasks = this.taskService.getUserTasks(userId);
-            if (tasks.isEmpty()) {
-                return new ResponseEntity<>("No tasks found for user " + userId, HttpStatus.OK);
-            }
-            return new ResponseEntity<>(tasks.toString(), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-    }
-
-    @GetMapping("/{usersId}/tasks/{tasksId}")
-    public ResponseEntity<String> getTask(@PathVariable Long userId, @PathVariable Long taskId) {
-        try {
-            TaskEntity task = this.taskService.getTask(userId, taskId);
-            return new ResponseEntity<>(task.toString(), HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @PutMapping("/{usersId}/tasks/{tasksId}")
-    public ResponseEntity<String> updateTask (@PathVariable Long userId, @PathVariable Long taskId, @RequestBody TaskEntity updatedTask) {
-        try {
-            this.taskService.updateTask(userId, taskId, updatedTask.getTitle(), updatedTask.getDescription(), updatedTask.getStatus());
-            return new ResponseEntity<>("Task updated successfully", HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @DeleteMapping("/{usersId}/tasks/{tasksId}")
-    public ResponseEntity<String> deleteTask (@PathVariable Long userId, @PathVariable Long taskId) {
-        try {
-            this.taskService.deleteTaskById(userId, taskId);
-            return new ResponseEntity<>("Task deleted successfully", HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-
-    }
-
-    //-----------------------------------------------------------------------------------------------------
-
-    //habit endpoints
-
-    @GetMapping("/habits/{usersId}")
-    public ResponseEntity<String> getAllUserHabits(@PathVariable ("usersId") Long userId) {
-        try {
-            List<HabitEntity> habits = this.habitService.getUserHabits(userId);
-            if (habits.isEmpty()) {
-                return new ResponseEntity<>("No tasks found for user " + userId, HttpStatus.OK);
-            }
-            return new ResponseEntity<>(habits.toString(), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error retrieving tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-    }
-
-    @GetMapping("/{usersId}/habit/{habitId}")
-    public ResponseEntity<String> getHabit(@PathVariable Long userId, @PathVariable Long habitId) {
-        try {
-            HabitEntity habit = this.habitService.getHabit(userId, habitId);
-            return new ResponseEntity<>(habit.toString(), HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @PutMapping("/{usersId}/habit/{habitId}")
-    public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long taskId, @RequestBody HabitEntity updatedHabit) {
-        try {
-            this.habitService.updateHabit(userId, taskId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
-            return new ResponseEntity<>("Task updated successfully", HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
-
-    @DeleteMapping("/{usersId}/habit/{habitId}")
-    public ResponseEntity<String> deleteHabit (@PathVariable Long userId, @PathVariable Long habitId) {
-        try {
-            this.habitService.deleteHabitById(userId, habitId);
-            return new ResponseEntity<>("Task deleted successfully", HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------
-
 
     //statistics-----------------------------------------------------------------------------------------
 }

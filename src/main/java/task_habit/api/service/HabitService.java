@@ -1,17 +1,21 @@
 package task_habit.api.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.stereotype.Service;
+import task_habit.api.dto.HabitDTO;
 import task_habit.api.model.*;
 import task_habit.api.repository.HabitRepository;
 import task_habit.api.repository.UserRepository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class HabitService {
 
+    @Autowired
     private final HabitRepository habitRepository;
     private UserRepository userRepository;
 
@@ -27,15 +31,47 @@ public class HabitService {
         return this.habitRepository.save(habit);
     }
 
+    public HabitDTO createUserHabit(Long userId, HabitDTO habitDTO) {
+        User user = this.userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+
+        HabitEntity habit = new HabitEntity();
+        habit.setName(habitDTO.getName());
+        habit.setDescription(habitDTO.getDescription());
+        habit.setFrequency(Frequency.valueOf(habitDTO.getDueDate().toString()));
+        habit.setLastCompletedDate(habitDTO.getLastCompletedDate());
+        habit.setUser(user);
+
+        HabitEntity savedHabit = this.habitRepository.save(habit);
+        return new HabitDTO(
+                savedHabit.getId(),
+                savedHabit.getName(),
+                savedHabit.getDescription(),
+                savedHabit.getFrequency(),
+                savedHabit.getLastCompletedDate(),
+                savedHabit.getUser().getId()
+        );
+    }
+
     public HabitEntity getHabit(Long userId, Long habitId) {
         return this.habitRepository.findByIdAndUserId(userId, habitId)
                 .orElseThrow(() -> new IllegalArgumentException("Habit with ID " + habitId + " not found for user " + userId));
     }
 
-    public List<HabitEntity> getUserHabits(Long userId) {
-        return this.userRepository.findById(userId)
-                .map(User::getHabits)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public List<HabitDTO> getUserHabits(Long userId) {
+        User user = this.userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+
+        List<HabitEntity> habits = this.habitRepository.findByUserId(userId);
+        return habits.stream()
+                .map(task -> new HabitDTO(
+                        task.getId(),
+                        task.getName(),
+                        task.getDescription(),
+                        task.getFrequency(),
+                        task.getLastCompletedDate(),
+                        task.getUser().getId()))
+                .collect(Collectors.toList());
     }
 
     public void deleteHabitById(Long userId, Long taskId) {
@@ -57,7 +93,7 @@ public class HabitService {
         HabitEntity habit = this.habitRepository.findByIdAndUserId(habitId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Habit with ID " + habitId + " not found for user " + userId));
 
-        habit.setLastCompletedDate(Date());
+        habit.setLastCompletedDate(new Date());
         this.habitRepository.save(habit);
     }
 }

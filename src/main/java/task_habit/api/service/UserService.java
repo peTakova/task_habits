@@ -4,12 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import task_habit.api.dto.UserDTO;
 import task_habit.api.model.User;
 import task_habit.api.repository.UserRepository;
 import task_habit.api.specifications.UserSpecifications;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -29,8 +32,14 @@ public class UserService {
         return this.userRepository.save(user);
     }
 
-    public List<User> getAllUsers() {
-        return this.userRepository.findAll();
+    public List<UserDTO> getAllUsers() {
+        List<User> users = this.userRepository.findAll();
+        return users.stream()
+                .map(user -> new UserDTO(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail()))
+                .collect(Collectors.toList());
     }
 
     public Optional<User> getUserById(Long id) {
@@ -42,10 +51,7 @@ public class UserService {
         return this.userRepository.findOne(spec);
     }
 
-    public User saveUser(User user) {
-        return this.userRepository.save(user);
-    }
-
+    @Transactional
     public User createUser(User user) {
         return this.userRepository.save(user);
     }
