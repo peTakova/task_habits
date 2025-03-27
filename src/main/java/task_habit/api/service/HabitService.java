@@ -1,8 +1,8 @@
 package task_habit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import task_habit.api.dto.HabitDTO;
 import task_habit.api.model.*;
 import task_habit.api.repository.HabitRepository;
@@ -19,8 +19,9 @@ public class HabitService {
     private final HabitRepository habitRepository;
     private UserRepository userRepository;
 
-    public HabitService(HabitRepository habitRepository) {
+    public HabitService(HabitRepository habitRepository, UserRepository userRepository) {
         this.habitRepository = habitRepository;
+        this.userRepository = userRepository;
     }
 
     public List<HabitEntity> getAllHabits() {
@@ -31,6 +32,7 @@ public class HabitService {
         return this.habitRepository.save(habit);
     }
 
+    @Transactional
     public HabitDTO createUserHabit(Long userId, HabitDTO habitDTO) {
         User user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
@@ -38,7 +40,7 @@ public class HabitService {
         HabitEntity habit = new HabitEntity();
         habit.setName(habitDTO.getName());
         habit.setDescription(habitDTO.getDescription());
-        habit.setFrequency(Frequency.valueOf(habitDTO.getDueDate().toString()));
+        habit.setFrequency(Frequency.valueOf(habitDTO.getFrequency().toString()));
         habit.setLastCompletedDate(habitDTO.getLastCompletedDate());
         habit.setUser(user);
 

@@ -18,7 +18,7 @@ public class HabitController {
     private HabitService habitService;
 
     @GetMapping("/habits/{usersId}")
-    public ResponseEntity<List<HabitDTO>> getAllUserHabits(@PathVariable("userId") Long userId) {
+    public ResponseEntity<List<HabitDTO>> getAllUserHabits(@PathVariable("usersId") Long userId) {
         try {
             List<HabitDTO> tasks = this.habitService.getUserHabits(userId);
             if (tasks.isEmpty()) {
@@ -45,9 +45,9 @@ public class HabitController {
     }
 
     @GetMapping("/{usersId}/get/{habitId}")
-    public ResponseEntity<HabitDTO> getHabit(@PathVariable Long userId, @PathVariable Long habitId) {
+    public ResponseEntity<HabitDTO> getHabit(@PathVariable Long usersId, @PathVariable Long habitId) {
         try {
-            HabitEntity habit = this.habitService.getHabit(userId, habitId);
+            HabitEntity habit = this.habitService.getHabit(usersId, habitId);
             HabitDTO habitDTO = new HabitDTO(
                     habit.getId(),
                     habit.getName(),
@@ -62,10 +62,10 @@ public class HabitController {
         }
     }
 
-    @PutMapping("/{usersId}/update/{habitId}")
-    public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long taskId, @RequestBody HabitEntity updatedHabit) {
+    @PutMapping("/{userId}/update/{habitId}")
+    public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long habitId, @RequestBody HabitEntity updatedHabit) {
         try {
-            this.habitService.updateHabit(userId, taskId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
+            this.habitService.updateHabit(userId, habitId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
             return new ResponseEntity<>("Task updated successfully", HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
@@ -73,7 +73,7 @@ public class HabitController {
     }
 
 
-    @DeleteMapping("/{usersId}/delete/{habitId}")
+    @DeleteMapping("/{userId}/delete/{habitId}")
     public ResponseEntity<String> deleteHabit (@PathVariable Long userId, @PathVariable Long habitId) {
         try {
             this.habitService.deleteHabitById(userId, habitId);
@@ -84,7 +84,7 @@ public class HabitController {
 
     }
 
-    @PatchMapping("/{usersId}/habit/{taskId}/complete")
+    @PatchMapping("/{userId}/habit/{taskId}/complete")
     public ResponseEntity<String> markHabitCompleted(@PathVariable Long userId, @PathVariable Long taskId) {
         try {
             this.habitService.markCompletedToday(userId, taskId);

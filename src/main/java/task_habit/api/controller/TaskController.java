@@ -17,7 +17,7 @@ public class TaskController {
     @Autowired
     private TaskService taskService;
 
-    @GetMapping("/tasks/{usersId}")
+    @GetMapping("/tasks/{userId}")
     public ResponseEntity<List<TaskDTO>> getAllUserTasks(@PathVariable("userId") Long userId) {
         try {
             List<TaskDTO> tasks = this.taskService.getUserTasks(userId);
@@ -44,7 +44,7 @@ public class TaskController {
         }
     }
 
-    @GetMapping("/{usersId}/get/{tasksId}")
+    @GetMapping("/{userId}/get/{taskId}")
     public ResponseEntity<TaskDTO> getTask(@PathVariable Long userId, @PathVariable("taskId") Long taskId) {
         try {
             TaskEntity task = this.taskService.getTask(userId, taskId);
@@ -62,7 +62,7 @@ public class TaskController {
         }
     }
 
-    @PutMapping("/{usersId}/update/{tasksId}")
+    @PutMapping("/{userId}/update/{taskId}")
     public ResponseEntity<String> updateTask (@PathVariable Long userId, @PathVariable Long taskId, @RequestBody TaskEntity updatedTask) {
         try {
             this.taskService.updateTask(userId, taskId, updatedTask.getTitle(), updatedTask.getDescription(), updatedTask.getStatus());
@@ -72,7 +72,7 @@ public class TaskController {
         }
     }
 
-    @DeleteMapping("/{usersId}/delete/{tasksId}")
+    @DeleteMapping("/{userId}/delete/{taskId}")
     public ResponseEntity<String> deleteTask (@PathVariable Long userId, @PathVariable Long taskId) {
         try {
             this.taskService.deleteTaskById(userId, taskId);
@@ -83,9 +83,9 @@ public class TaskController {
     }
 
     @PatchMapping("/{usersId}/tasks/{taskId}/complete")
-    public ResponseEntity<String> markTaskCompleted(@PathVariable Long userId, @PathVariable Long taskId) {
+    public ResponseEntity<String> markTaskCompleted(@PathVariable Long usersId, @PathVariable Long taskId) {
         try {
-            this.taskService.markCompleted(taskId, userId);
+            this.taskService.markCompleted(taskId, usersId);
             return new ResponseEntity<>("Task marked as completed", HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);

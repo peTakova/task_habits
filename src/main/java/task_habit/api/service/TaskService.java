@@ -20,8 +20,9 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private UserRepository userRepository;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, UserRepository userRepository) {
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -50,6 +51,7 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public TaskDTO createUserTask(Long userId, TaskDTO taskDTO) {
         User user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
