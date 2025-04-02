@@ -12,6 +12,8 @@ import task_habit.api.model.User;
 import task_habit.api.repository.UserRepository;
 import task_habit.api.specifications.UserSpecifications;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +46,15 @@ public class UserService implements UserDetailsService {
                         user.getUsername(),
                         user.getEmail()))
                 .collect(Collectors.toList());
+    }
+
+    public Page<UserDTO> getAllUsersPageable(Pageable pageable) {
+        Page<User> usersPage = this.userRepository.findAll(pageable);
+        return usersPage.map(user -> new UserDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail()
+        ));
     }
 
     public Optional<User> getUserById(Long id) {

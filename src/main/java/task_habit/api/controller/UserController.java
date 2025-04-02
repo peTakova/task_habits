@@ -2,6 +2,10 @@ package task_habit.api.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,6 +50,25 @@ public class UserController {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
             return new ResponseEntity<>(users, HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/all/page")
+    public ResponseEntity<Page<UserDTO>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,asc") String sort) {
+        try {
+            String[] sortParams = sort.split(",");
+            String sortField = sortParams[0];
+            Sort.Direction sortDirection = Sort.Direction.fromString(sortParams[1]);
+
+            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
+            Page<UserDTO> usersPage = this.userService.getAllUsersPageable(pageable);
+
+            return new ResponseEntity<>(usersPage, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }

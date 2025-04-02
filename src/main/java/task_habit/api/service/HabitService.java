@@ -1,6 +1,8 @@
 package task_habit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -118,5 +120,17 @@ public class HabitService {
 
     public long getUserHabitsCount(Long userId) {
         return this.habitRepository.countByUserId(userId);
+    }
+
+    public Page<HabitDTO> getAllTasksPageable(Pageable pageable) {
+        Page<HabitEntity> habitsPage = this.habitRepository.findAll(pageable);
+        return habitsPage.map(task -> new HabitDTO(
+                task.getId(),
+                task.getName(),
+                task.getDescription(),
+                task.getFrequency(),
+                task.getLastCompletedDate(),
+                task.getUser().getId()
+        ));
     }
 }

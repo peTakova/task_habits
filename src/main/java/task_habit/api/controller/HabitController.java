@@ -1,8 +1,13 @@
 package task_habit.api.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.dto.HabitDTO;
 import task_habit.api.model.HabitEntity;
@@ -27,6 +32,26 @@ public class HabitController {
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<HabitDTO>> getAllHabits(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,asc") String sort) {
+        try {
+            String[] sortParams = sort.split(",");
+            String sortField = sortParams[0];
+            Sort.Direction sortDirection = Sort.Direction.fromString(sortParams[1]);
+
+            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
+            Page<HabitDTO> habitsPage = this.habitService.getAllTasksPageable(pageable);
+
+            return new ResponseEntity<>(habitsPage, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }

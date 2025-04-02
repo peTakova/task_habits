@@ -1,6 +1,8 @@
 package task_habit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -15,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static task_habit.api.model.TaskEntity_.status;
 
 @Service
 public class TaskService {
@@ -68,6 +69,18 @@ public class TaskService {
                         task.getStatus().name(),
                         task.getUser().getId()))
                 .collect(Collectors.toList());
+    }
+
+    public Page<TaskDTO> getAllTasksPageable(Pageable pageable) {
+        Page<TaskEntity> tasksPage = this.taskRepository.findAll(pageable);
+        return tasksPage.map(task -> new TaskDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getDueDate(),
+                task.getStatus().name(),
+                task.getUser().getId()
+        ));
     }
 
     @Transactional
