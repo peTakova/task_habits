@@ -9,7 +9,7 @@ import java.util.List;
 
 @Entity
 @Data
-@Table(name = "TaskEntity")
+@Table(name = "task_entity")
 public class TaskEntity {
 
     @Id
@@ -21,6 +21,7 @@ public class TaskEntity {
 
     private String description;
 
+    @Column(name = "dueDate")
     private Date dueDate;
 
     @Enumerated(EnumType.STRING)
@@ -31,6 +32,8 @@ public class TaskEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-
     public TaskEntity() {}
+    public TaskEntity(User user) {
+        this.user = user;
+    }
 }

@@ -7,7 +7,7 @@ import java.util.Date;
 
 @Entity
 @Data
-@Table(name = "HabitEntity")
+@Table(name = "habit_entity")
 public class HabitEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +23,7 @@ public class HabitEntity {
     @Column(nullable = false)
     private Frequency frequency;
 
+    @Column(name = "lastCompletedDate")
     private Date lastCompletedDate;
 
     @ManyToOne
