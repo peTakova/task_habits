@@ -23,6 +23,7 @@ public class HabitEntity {
     @Column(nullable = false)
     private Frequency frequency;
 
+    @Column(name = "lastCompletedDate")
     private Date lastCompletedDate;
 
     @ManyToOne

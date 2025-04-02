@@ -60,6 +60,19 @@ public class HabitService {
                 .orElseThrow(() -> new IllegalArgumentException("Habit with ID " + habitId + " not found for user " + userId));
     }
 
+    public List<HabitDTO> getAllWeeklyHabits() {
+        List<HabitEntity> habits = this.habitRepository.findByFrequency(Frequency.WEEKLY);
+        return habits.stream()
+                .map(habit -> new HabitDTO(
+                        habit.getId(),
+                        habit.getName(),
+                        habit.getDescription(),
+                        habit.getFrequency(),
+                        habit.getLastCompletedDate(),
+                        habit.getUser().getId()))
+                .collect(Collectors.toList());
+    }
+
     public List<HabitDTO> getUserHabits(Long userId) {
         User user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));

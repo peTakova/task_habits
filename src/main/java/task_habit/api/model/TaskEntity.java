@@ -21,6 +21,7 @@ public class TaskEntity {
 
     private String description;
 
+    @Column(name = "dueDate")
     private Date dueDate;
 
     @Enumerated(EnumType.STRING)

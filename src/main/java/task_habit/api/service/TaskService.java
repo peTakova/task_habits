@@ -35,6 +35,19 @@ public class TaskService {
                 .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found for user " + userId));
     }
 
+    public List<TaskDTO> getAllCompletedTasks() {
+        List<TaskEntity> tasks = this.taskRepository.findByStatus(TaskStatus.COMPLETED);
+        return tasks.stream()
+                .map(task -> new TaskDTO(
+                        task.getId(),
+                        task.getTitle(),
+                        task.getDescription(),
+                        task.getDueDate(),
+                        task.getStatus().name(),
+                        task.getUser().getId()))
+                .collect(Collectors.toList());
+    }
+
     public List<TaskDTO> getUserTasks(Long userId) {
         User user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
