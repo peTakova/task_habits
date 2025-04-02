@@ -4,11 +4,19 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.config.JwtUtil;
+import task_habit.api.dto.HabitDTO;
+import task_habit.api.dto.TaskDTO;
 import task_habit.api.dto.UserDTO;
+import task_habit.api.dto.UserStatsDTO;
 import task_habit.api.model.User;
+import task_habit.api.service.HabitService;
+import task_habit.api.service.TaskService;
 import task_habit.api.service.UserService;
 
 import java.util.*;
@@ -17,11 +25,17 @@ import java.util.*;
 @RequestMapping("/users")
 public class UserController {
     private final UserService userService;
+    private final TaskService taskService;
+    private final HabitService habitService;
+    private final JwtUtil jwtUtil;
 @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, TaskService taskService, HabitService habitService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.taskService = taskService;
+        this.habitService = habitService;
+        this.jwtUtil = jwtUtil;
     }
 
     @GetMapping("/all")
@@ -60,7 +74,7 @@ public class UserController {
         user.setPassword(this.passwordEncoder.encode(user.getPassword()));
         this.userService.createUser(user);
 
-        String token = JwtUtil.generateToken(user.getEmail() );
+        String token = this.jwtUtil.generateToken(user.getEmail() );
         //return ResponseEntity.ok(Map.of("message", "Registrácia úspešná", "token", token));
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Registrácia úspešná");
@@ -82,4 +96,54 @@ public class UserController {
     }
 
     //statistics-----------------------------------------------------------------------------------------
+
+    @GetMapping("/completed-tasks")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TaskDTO>> getAllCompletedTasks() {
+        try {
+            List<TaskDTO> completedTasks = this.taskService.getAllCompletedTasks();
+            if (completedTasks.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(completedTasks, HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/weekly-habits")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<HabitDTO>> getAllWeeklyHabits() {
+        try {
+            List<HabitDTO> weeklyHabits = this.habitService.getAllWeeklyHabits();
+            if (weeklyHabits.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(weeklyHabits, HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("isAuthenticated()") // Iba autentifikovaní používatelia
+    public ResponseEntity<UserStatsDTO> getUserStats() {
+        try {
+            String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+            User user = this.userService.getUserByEmail(email)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            Long userId = user.getId();
+            long completedTasks = this.taskService.getUserCompletedTasksCount(userId);
+            long totalHabits = this.habitService.getUserHabitsCount(userId);
+
+            UserStatsDTO stats = new UserStatsDTO(userId, completedTasks, totalHabits);
+            return new ResponseEntity<>(stats, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

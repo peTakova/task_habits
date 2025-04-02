@@ -17,10 +17,10 @@ public class HabitController {
     @Autowired
     private HabitService habitService;
 
-    @GetMapping("/habits/{usersId}")
-    public ResponseEntity<List<HabitDTO>> getAllUserHabits(@PathVariable("usersId") Long userId) {
+    @GetMapping("/habits")
+    public ResponseEntity<List<HabitDTO>> getAllUserHabits() {
         try {
-            List<HabitDTO> tasks = this.habitService.getUserHabits(userId);
+            List<HabitDTO> tasks = this.habitService.getUserHabits();
             if (tasks.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }

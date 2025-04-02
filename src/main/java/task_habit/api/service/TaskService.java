@@ -1,6 +1,8 @@
 package task_habit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import task_habit.api.dto.TaskDTO;
 import task_habit.api.model.TaskEntity;
@@ -12,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static task_habit.api.model.TaskEntity_.status;
 
 @Service
 public class TaskService {
@@ -48,10 +52,12 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
-    public List<TaskDTO> getUserTasks(Long userId) {
-        User user = this.userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+    public List<TaskDTO> getUserTasks() {
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        User user = this.userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + email + " not found"));
 
+        Long userId = user.getId();
         List<TaskEntity> tasks = this.taskRepository.findByUserId(userId);
         return tasks.stream()
                 .map(task -> new TaskDTO(
@@ -59,7 +65,7 @@ public class TaskService {
                         task.getTitle(),
                         task.getDescription(),
                         task.getDueDate(),
-                        task.getStatus().name(), // Enum ako String
+                        task.getStatus().name(),
                         task.getUser().getId()))
                 .collect(Collectors.toList());
     }
@@ -110,4 +116,7 @@ public class TaskService {
         this.taskRepository.save(task);
     }
 
+    public long getUserCompletedTasksCount(Long userId) {
+        return this.taskRepository.countByUserIdAndStatus(userId, TaskStatus.COMPLETED);
+    }
 }

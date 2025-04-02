@@ -2,6 +2,9 @@ package task_habit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import task_habit.api.dto.UserDTO;
@@ -10,12 +13,13 @@ import task_habit.api.repository.UserRepository;
 import task_habit.api.specifications.UserSpecifications;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
     @Autowired
     private final UserRepository userRepository;
     private PasswordEncoder passwordEncoder;
@@ -49,6 +53,14 @@ public class UserService {
     public Optional<User> getUserByEmail(String email) {
         Specification<User> spec = UserSpecifications.hasEmail(email);
         return this.userRepository.findOne(spec);
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = this.userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPassword(), new ArrayList<>());
     }
 
     @Transactional

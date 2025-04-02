@@ -1,6 +1,8 @@
 package task_habit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import task_habit.api.dto.HabitDTO;
@@ -73,19 +75,21 @@ public class HabitService {
                 .collect(Collectors.toList());
     }
 
-    public List<HabitDTO> getUserHabits(Long userId) {
-        User user = this.userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " not found"));
+    public List<HabitDTO> getUserHabits() {
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        User user = this.userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + email + " not found"));
 
+        Long userId = user.getId();
         List<HabitEntity> habits = this.habitRepository.findByUserId(userId);
         return habits.stream()
-                .map(task -> new HabitDTO(
-                        task.getId(),
-                        task.getName(),
-                        task.getDescription(),
-                        task.getFrequency(),
-                        task.getLastCompletedDate(),
-                        task.getUser().getId()))
+                .map(habit -> new HabitDTO(
+                        habit.getId(),
+                        habit.getName(),
+                        habit.getDescription(),
+                        habit.getFrequency(),
+                        habit.getLastCompletedDate(),
+                        habit.getUser().getId()))
                 .collect(Collectors.toList());
     }
 
@@ -110,5 +114,9 @@ public class HabitService {
 
         habit.setLastCompletedDate(new Date());
         this.habitRepository.save(habit);
+    }
+
+    public long getUserHabitsCount(Long userId) {
+        return this.habitRepository.countByUserId(userId);
     }
 }

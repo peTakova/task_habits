@@ -17,10 +17,10 @@ public class TaskController {
     @Autowired
     private TaskService taskService;
 
-    @GetMapping("/tasks/{userId}")
-    public ResponseEntity<List<TaskDTO>> getAllUserTasks(@PathVariable("userId") Long userId) {
+    @GetMapping("/tasks")
+    public ResponseEntity<List<TaskDTO>> getAllUserTasks() {
         try {
-            List<TaskDTO> tasks = this.taskService.getUserTasks(userId);
+            List<TaskDTO> tasks = this.taskService.getUserTasks();
             if (tasks.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
