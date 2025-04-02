@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import task_habit.api.model.TaskEntity;
 import task_habit.api.model.TaskStatus;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,4 +16,6 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
     List<TaskEntity> findByStatus(TaskStatus status);
     long countByUserIdAndStatus(Long userId, TaskStatus status);
+
+    List<TaskEntity> findAllByDueDateBetweenAndStatusNot(Date start, Date end, TaskStatus taskStatus);
 }
