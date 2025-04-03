@@ -18,7 +18,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
 
     List<TaskEntity> findByStatus(TaskStatus status);
     long countByUserIdAndStatus(Long userId, TaskStatus status);
-    Page<TaskEntity> findAll(Pageable pageable);
-
+    Page<TaskEntity> findByUserId(Long userId, Pageable pageable);
+    List<TaskEntity> findByUserIdAndStatus(Long userId, TaskStatus status);
     List<TaskEntity> findAllByDueDateBetweenAndStatusNot(Date start, Date end, TaskStatus taskStatus);
 }

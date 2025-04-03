@@ -8,10 +8,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.dto.HabitDTO;
 import task_habit.api.model.HabitEntity;
 import task_habit.api.service.HabitService;
+import task_habit.api.service.UserService;
+import task_habit.api.model.User;
 
 import java.util.List;
 
@@ -21,8 +25,16 @@ public class HabitController {
 
     @Autowired
     private HabitService habitService;
+    private UserService userService;
+
+    @Autowired
+    public HabitController(HabitService habitService, UserService userService) {
+        this.habitService = habitService;
+        this.userService = userService;
+    }
 
     @GetMapping("/habits")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<HabitDTO>> getAllUserHabits() {
         try {
             List<HabitDTO> tasks = this.habitService.getUserHabits();
@@ -58,9 +70,11 @@ public class HabitController {
     }
 
     @PostMapping("/{userId}/create")
-    public ResponseEntity<HabitDTO> createHabit(@PathVariable Long userId, @RequestBody HabitDTO habitDTO) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HabitDTO> createHabit(@RequestBody HabitDTO habitDTO) {
         try {
-            HabitDTO createdHabit = this.habitService.createUserHabit(userId, habitDTO);
+            Long usersId = this.getAuthenticatedUserId();
+            HabitDTO createdHabit = this.habitService.createUserHabit(usersId, habitDTO);
             return new ResponseEntity<>(createdHabit, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
@@ -69,9 +83,11 @@ public class HabitController {
         }
     }
 
-    @GetMapping("/{usersId}/get/{habitId}")
-    public ResponseEntity<HabitDTO> getHabit(@PathVariable Long usersId, @PathVariable Long habitId) {
+    @GetMapping("/get/{habitId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HabitDTO> getHabit(@PathVariable Long habitId) {
         try {
+            Long usersId = this.getAuthenticatedUserId();
             HabitEntity habit = this.habitService.getHabit(usersId, habitId);
             HabitDTO habitDTO = new HabitDTO(
                     habit.getId(),
@@ -88,6 +104,7 @@ public class HabitController {
     }
 
     @PutMapping("/{userId}/update/{habitId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long habitId, @RequestBody HabitEntity updatedHabit) {
         try {
             this.habitService.updateHabit(userId, habitId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
@@ -99,6 +116,7 @@ public class HabitController {
 
 
     @DeleteMapping("/{userId}/delete/{habitId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> deleteHabit (@PathVariable Long userId, @PathVariable Long habitId) {
         try {
             this.habitService.deleteHabitById(userId, habitId);
@@ -110,6 +128,7 @@ public class HabitController {
     }
 
     @PatchMapping("/{userId}/habit/{taskId}/complete")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> markHabitCompleted(@PathVariable Long userId, @PathVariable Long taskId) {
         try {
             this.habitService.markCompletedToday(userId, taskId);
@@ -117,6 +136,13 @@ public class HabitController {
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
+    }
+
+    private Long getAuthenticatedUserId() {
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        return this.userService.getUserByEmail(email)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 
 }

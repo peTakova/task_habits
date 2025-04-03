@@ -74,6 +74,13 @@ public class UserController {
         }
     }
 
+    private Long getAuthenticatedUserId() {
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        return this.userService.getUserByEmail(email)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
     @GetMapping("findById/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         Optional<User> userOpt = this.userService.getUserById(id);
@@ -84,6 +91,23 @@ public class UserController {
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(null);
+        }
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserDTO> getCurrentUser() {
+        try {
+            Long userId = this.getAuthenticatedUserId();
+            Optional<User> userOpt = this.userService.getUserById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), user.getEmail());
+                return ResponseEntity.ok(userDTO);
+            }
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -106,15 +130,43 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> loginUser(@RequestBody Map<String, String> loginRequest) {
+        String email = loginRequest.get("email");
+        String password = loginRequest.get("password");
+
+        Optional<User> userOpt = this.userService.getUserByEmail(email);
+        if (userOpt.isEmpty() || !this.passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid email or password"));
+        }
+
+        User user = userOpt.get();
+        String token = this.jwtUtil.generateToken(user.getEmail());
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Prihlásenie úspešné");
+        response.put("token", token);
+        response.put("userId", user.getId());
+
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable Long id) {
-        boolean deleted = this.userService.deleteUserById(id);
-
-        if (deleted) {
-            return ResponseEntity.ok("Používateľ s ID " + id + " bol úspešne vymazaný.");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Používateľ s ID " + id + " neexistuje.");
+        try {
+            Long authenticatedUserId = this.getAuthenticatedUserId();
+            if (!authenticatedUserId.equals(id)) {
+                return new ResponseEntity<>("You can only delete your own account", HttpStatus.FORBIDDEN);
+            }
+            boolean deleted = this.userService.deleteUserById(id);
+            if (deleted) {
+                return ResponseEntity.ok("Používateľ s ID " + id + " bol úspešne vymazaný.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Používateľ s ID " + id + " neexistuje.");
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -124,7 +176,8 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<TaskDTO>> getAllCompletedTasks() {
         try {
-            List<TaskDTO> completedTasks = this.taskService.getAllCompletedTasks();
+            Long userId = this.getAuthenticatedUserId();
+            List<TaskDTO> completedTasks = this.taskService.getAllCompletedTasks(userId);
             if (completedTasks.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
@@ -138,7 +191,8 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<HabitDTO>> getAllWeeklyHabits() {
         try {
-            List<HabitDTO> weeklyHabits = this.habitService.getAllWeeklyHabits();
+            Long userId = this.getAuthenticatedUserId();
+            List<HabitDTO> weeklyHabits = this.habitService.getAllWeeklyHabits(userId);
             if (weeklyHabits.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
@@ -149,14 +203,10 @@ public class UserController {
     }
 
     @GetMapping("/stats")
-    @PreAuthorize("isAuthenticated()") // Iba autentifikovaní používatelia
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserStatsDTO> getUserStats() {
         try {
-            String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
-            User user = this.userService.getUserByEmail(email)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-            Long userId = user.getId();
+            Long userId = this.getAuthenticatedUserId();
             long completedTasks = this.taskService.getUserCompletedTasksCount(userId);
             long totalHabits = this.habitService.getUserHabitsCount(userId);
 

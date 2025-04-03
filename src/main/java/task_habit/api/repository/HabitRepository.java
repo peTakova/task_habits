@@ -18,5 +18,6 @@ public interface HabitRepository extends JpaRepository<HabitEntity, Long> {
     List<HabitEntity> findByUserId(Long userId);
     List<HabitEntity> findByFrequency(Frequency frequency);
     long countByUserId(Long userId);
-    Page<HabitEntity> findAll(Pageable pageable);
+    Page<HabitEntity> findByUserId(Long userId, Pageable pageable);
+    List<HabitEntity> findByUserIdAndFrequency(Long userId, Frequency frequency);
 }

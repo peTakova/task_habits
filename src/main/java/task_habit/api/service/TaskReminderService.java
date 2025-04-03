@@ -1,6 +1,5 @@
 package task_habit.api.service;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,47 +17,41 @@ import java.util.List;
 @EnableScheduling
 public class TaskReminderService {
     private final TaskRepository taskRepository;
-    private final JavaMailSender mailSender;
 
     @Autowired
-    public TaskReminderService(TaskRepository taskRepository, JavaMailSender mailSender) {
+    public TaskReminderService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
-        this.mailSender = mailSender;
     }
 
-    @Scheduled(fixedRate = 3600000)
-    public void sendTaskReminders() {
+    @Scheduled(fixedRate = 600000)
+    public void generateTaskReminders() {
         Date now = new Date();
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(now);
-        calendar.add(Calendar.DAY_OF_YEAR, 1);
+        calendar.add(Calendar.HOUR_OF_DAY, 24);
         Date tomorrow = calendar.getTime();
 
         List<TaskEntity> tasks = this.taskRepository.findAllByDueDateBetweenAndStatusNot(
-                this.adjustTime(tomorrow, -1),
-                this.adjustTime(tomorrow, 1),
+                now,
+                tomorrow,
                 TaskStatus.COMPLETED
         );
 
         for (TaskEntity task : tasks) {
-            if (task.getDueDate().after(now) && task.getDueDate().before(adjustTime(tomorrow, 1))) {
-                this.sendReminderEmail(task);
+            if (task.getDueDate().after(now) && task.getDueDate().before(tomorrow)) {
+                this.setReminderMessage(task);
             }
         }
     }
 
-    private void sendReminderEmail(TaskEntity task) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(task.getUser().getEmail());
-        message.setSubject("Pripomenutie úlohy: " + task.getTitle());
-        message.setText("Ahoj " + task.getUser().getUsername() + ",\n\n" +
-                "Pripomíname ti úlohu '" + task.getTitle() + "', ktorá má termín zajtra.\n" +
+    private void setReminderMessage(TaskEntity task) {
+        String message = "Upozornenie: Úloha '" + task.getTitle() + "' má termín do 24 hodín!\n" +
                 "Popis: " + (task.getDescription() != null ? task.getDescription() : "Žiadny") + "\n" +
-                "Termín: " + task.getDueDate() + "\n\n" +
-                "Nezabudni ju dokončiť!\n\n" +
-                "Tvoj TaskHabit tím");
+                "Termín: " + task.getDueDate() + "\n" +
+                "Dokonči ju čím skôr!";
 
-        this.mailSender.send(message);
+        task.setReminderMessage(message);
+        this.taskRepository.save(task);
     }
 
     private Date adjustTime(Date date, int hours) {

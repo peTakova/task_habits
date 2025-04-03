@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.Date;
 
-@NoArgsConstructor
+//@NoArgsConstructor
 @AllArgsConstructor
 @Data
 public class TaskDTO {
@@ -16,6 +16,16 @@ public class TaskDTO {
     private Date dueDate;
     private String status; // Enum ako String
     private Long userId;
+    private String reminderMessage;
+
+    public TaskDTO(Long id, String title, String description, Date dueDate, String status, Long userId) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.status = status;
+        this.userId = userId;
+    }
 
 //    public TaskDTO(Long id, String title, String description, Date dueDate, String status, Long userId) {
 //        this.id = id;

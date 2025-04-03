@@ -32,9 +32,9 @@ public class HabitService {
         return this.habitRepository.findAll();
     }
 
-    public HabitEntity createHabit(HabitEntity habit) {
-        return this.habitRepository.save(habit);
-    }
+    //public HabitEntity createHabit(HabitEntity habit) {
+        //return this.habitRepository.save(habit);
+    //}
 
     @Transactional
     public HabitDTO createUserHabit(Long userId, HabitDTO habitDTO) {
@@ -64,7 +64,7 @@ public class HabitService {
                 .orElseThrow(() -> new IllegalArgumentException("Habit with ID " + habitId + " not found for user " + userId));
     }
 
-    public List<HabitDTO> getAllWeeklyHabits() {
+    public List<HabitDTO> getAllWeeklyHabits(Long userId) {
         List<HabitEntity> habits = this.habitRepository.findByFrequency(Frequency.WEEKLY);
         return habits.stream()
                 .map(habit -> new HabitDTO(
@@ -78,11 +78,7 @@ public class HabitService {
     }
 
     public List<HabitDTO> getUserHabits() {
-        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
-        User user = this.userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User with email " + email + " not found"));
-
-        Long userId = user.getId();
+        Long userId = this.getAuthenticatedUserId();
         List<HabitEntity> habits = this.habitRepository.findByUserId(userId);
         return habits.stream()
                 .map(habit -> new HabitDTO(
@@ -132,5 +128,11 @@ public class HabitService {
                 task.getLastCompletedDate(),
                 task.getUser().getId()
         ));
+    }
+    private Long getAuthenticatedUserId() {
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        return this.userRepository.findByEmail(email)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 }

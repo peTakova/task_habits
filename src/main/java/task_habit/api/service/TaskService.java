@@ -40,8 +40,15 @@ public class TaskService {
                 .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found for user " + userId));
     }
 
-    public List<TaskDTO> getAllCompletedTasks() {
-        List<TaskEntity> tasks = this.taskRepository.findByStatus(TaskStatus.COMPLETED);
+    private Long getAuthenticatedUserId() {
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
+        return this.userRepository.findByEmail(email)
+                .map(User::getId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    public List<TaskDTO> getAllCompletedTasks(Long userId) {
+        List<TaskEntity> tasks = this.taskRepository.findByUserIdAndStatus(userId, TaskStatus.COMPLETED);
         return tasks.stream()
                 .map(task -> new TaskDTO(
                         task.getId(),
@@ -54,11 +61,7 @@ public class TaskService {
     }
 
     public List<TaskDTO> getUserTasks() {
-        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
-        User user = this.userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User with email " + email + " not found"));
-
-        Long userId = user.getId();
+        Long userId = this.getAuthenticatedUserId();
         List<TaskEntity> tasks = this.taskRepository.findByUserId(userId);
         return tasks.stream()
                 .map(task -> new TaskDTO(
@@ -67,19 +70,22 @@ public class TaskService {
                         task.getDescription(),
                         task.getDueDate(),
                         task.getStatus().name(),
-                        task.getUser().getId()))
+                        task.getUser().getId(),
+                        task.getReminderMessage()))
                 .collect(Collectors.toList());
     }
 
     public Page<TaskDTO> getAllTasksPageable(Pageable pageable) {
-        Page<TaskEntity> tasksPage = this.taskRepository.findAll(pageable);
+        Long userId = this.getAuthenticatedUserId();
+        Page<TaskEntity> tasksPage = this.taskRepository.findByUserId(userId, pageable);
         return tasksPage.map(task -> new TaskDTO(
                 task.getId(),
                 task.getTitle(),
                 task.getDescription(),
                 task.getDueDate(),
                 task.getStatus().name(),
-                task.getUser().getId()
+                task.getUser().getId(),
+                task.getReminderMessage()
         ));
     }
 
