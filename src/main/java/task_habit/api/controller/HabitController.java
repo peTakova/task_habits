@@ -103,22 +103,24 @@ public class HabitController {
         }
     }
 
-    @PutMapping("/{userId}/update/{habitId}")
+    @PutMapping("/update/{habitId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long habitId, @RequestBody HabitEntity updatedHabit) {
+    public ResponseEntity<String> updateHabit (@PathVariable Long habitId, @RequestBody HabitEntity updatedHabit) {
         try {
+            Long userId = this.getAuthenticatedUserId();
             this.habitService.updateHabit(userId, habitId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
-            return new ResponseEntity<>("Task updated successfully", HttpStatus.ACCEPTED);
+            return new ResponseEntity<>("Habit updated successfully", HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
 
-    @DeleteMapping("/{userId}/delete/{habitId}")
+    @DeleteMapping("/delete/{habitId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> deleteHabit (@PathVariable Long userId, @PathVariable Long habitId) {
+    public ResponseEntity<String> deleteHabit (@PathVariable Long habitId) {
         try {
+            Long userId = this.getAuthenticatedUserId();
             this.habitService.deleteHabitById(userId, habitId);
             return new ResponseEntity<>("Task deleted successfully", HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException e) {
@@ -127,10 +129,11 @@ public class HabitController {
 
     }
 
-    @PatchMapping("/{userId}/habit/{taskId}/complete")
+    @PatchMapping("/habits/{taskId}/complete")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> markHabitCompleted(@PathVariable Long userId, @PathVariable Long taskId) {
+    public ResponseEntity<String> markHabitCompleted(@PathVariable Long taskId) {
         try {
+            Long userId = this.getAuthenticatedUserId();
             this.habitService.markCompletedToday(userId, taskId);
             return new ResponseEntity<>("Task marked as completed", HttpStatus.ACCEPTED);
         } catch (IllegalArgumentException e) {

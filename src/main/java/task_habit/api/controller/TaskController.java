@@ -73,6 +73,7 @@ public class TaskController {
     @PostMapping("/create")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TaskDTO> createTask(@RequestBody TaskDTO taskDTO) {
+        System.out.println("Received Task: " + taskDTO);
         try {
             Long userId = this.getAuthenticatedUserId();
             TaskDTO createdTask = this.taskService.createUserTask(userId, taskDTO);
@@ -128,7 +129,7 @@ public class TaskController {
         }
     }
 
-    @PatchMapping("/{usersId}/tasks/{taskId}/complete")
+    @PatchMapping("/tasks/{taskId}/complete")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> markTaskCompleted(@PathVariable Long taskId) {
         try {

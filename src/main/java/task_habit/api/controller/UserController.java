@@ -192,7 +192,7 @@ public class UserController {
     public ResponseEntity<List<HabitDTO>> getAllWeeklyHabits() {
         try {
             Long userId = this.getAuthenticatedUserId();
-            List<HabitDTO> weeklyHabits = this.habitService.getAllWeeklyHabits(userId);
+            List<HabitDTO> weeklyHabits = this.habitService.getAllWeeklyHabits();
             if (weeklyHabits.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }

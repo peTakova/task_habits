@@ -64,8 +64,9 @@ public class HabitService {
                 .orElseThrow(() -> new IllegalArgumentException("Habit with ID " + habitId + " not found for user " + userId));
     }
 
-    public List<HabitDTO> getAllWeeklyHabits(Long userId) {
-        List<HabitEntity> habits = this.habitRepository.findByFrequency(Frequency.WEEKLY);
+    public List<HabitDTO> getAllWeeklyHabits() {
+        Long userId = this.getAuthenticatedUserId();
+        List<HabitEntity> habits = this.habitRepository.findByUserIdAndFrequency(userId, Frequency.WEEKLY);
         return habits.stream()
                 .map(habit -> new HabitDTO(
                         habit.getId(),
@@ -119,7 +120,8 @@ public class HabitService {
     }
 
     public Page<HabitDTO> getAllTasksPageable(Pageable pageable) {
-        Page<HabitEntity> habitsPage = this.habitRepository.findAll(pageable);
+        Long userId = this.getAuthenticatedUserId();
+        Page<HabitEntity> habitsPage = this.habitRepository.findByUserId(userId, pageable);
         return habitsPage.map(task -> new HabitDTO(
                 task.getId(),
                 task.getName(),

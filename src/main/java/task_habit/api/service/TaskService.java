@@ -127,7 +127,7 @@ public class TaskService {
         this.taskRepository.save(task);
     }
 
-    public void markCompleted(Long userId, Long taskId) {
+    public void markCompleted(Long taskId, Long userId) {
         TaskEntity task = this.taskRepository.findByIdAndUserId(taskId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Task with ID " + taskId + " not found for user " + userId));
 
