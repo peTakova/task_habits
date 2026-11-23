@@ -1,16 +1,19 @@
 package task_habit.api.dto;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserStatsDTO {
-
     private Long userId;
     private long completedTasks;
+    private long pendingTasks;
+    private long totalTasks;
     private long totalHabits;
-
-    public UserStatsDTO(Long userId, long completedTasks, long totalHabits) {
-        this.userId = userId;
-        this.completedTasks = completedTasks;
-        this.totalHabits = totalHabits;
-    }
+    private long dailyHabits;
+    private long weeklyHabits;
+    private long monthlyHabits;
 }

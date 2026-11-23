@@ -1,150 +1,92 @@
 package task_habit.api.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.dto.TaskDTO;
-import task_habit.api.model.TaskEntity;
 import task_habit.api.service.TaskService;
 import task_habit.api.service.UserService;
-import task_habit.api.model.User;
 
 import java.util.List;
 
+/**
+ * Úlohy prihláseného používateľa.
+ *
+ * GET    /task                 – všetky úlohy
+ * GET    /task/page            – stránkovanie (?page, size, sort=pole,asc|desc)
+ * GET    /task/{id}            – detail
+ * POST   /task                 – vytvorenie
+ * PUT    /task/{id}            – úprava (title, description, dueDate, status)
+ * PATCH  /task/{id}/complete   – označenie ako hotová
+ * DELETE /task/{id}            – zmazanie
+ */
 @RestController
 @RequestMapping("/task")
 public class TaskController {
 
-    @Autowired
-    private TaskService taskService;
-    private UserService userService;
+    private final TaskService taskService;
+    private final UserService userService;
 
-    @Autowired
     public TaskController(TaskService taskService, UserService userService) {
         this.taskService = taskService;
         this.userService = userService;
     }
 
-    @GetMapping("/tasks")
-    public ResponseEntity<List<TaskDTO>> getAllUserTasks() {
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            List<TaskDTO> tasks = this.taskService.getUserTasks();
-            if (tasks.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            }
-            return new ResponseEntity<>(tasks, HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    @GetMapping
+    public List<TaskDTO> getAllUserTasks() {
+        return this.taskService.getUserTasks(this.userService.getCurrentUserId());
     }
 
-    @GetMapping("/all/page")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<TaskDTO>> getAllTasks(
+    @GetMapping("/page")
+    public Page<TaskDTO> getTasksPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id,asc") String sort) {
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            String[] sortParams = sort.split(",");
-            String sortField = sortParams[0];
-            Sort.Direction sortDirection = Sort.Direction.fromString(sortParams[1]);
-
-            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
-            Page<TaskDTO> tasksPage = this.taskService.getAllTasksPageable(pageable);
-
-            return new ResponseEntity<>(tasksPage, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return this.taskService.getUserTasksPageable(this.userService.getCurrentUserId(), PageRequests.of(page, size, sort));
     }
 
-    @PostMapping("/create")
-    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{taskId}")
+    public TaskDTO getTask(@PathVariable Long taskId) {
+        return this.taskService.getTask(this.userService.getCurrentUserId(), taskId);
+    }
+
+    @PostMapping
     public ResponseEntity<TaskDTO> createTask(@RequestBody TaskDTO taskDTO) {
-        System.out.println("Received Task: " + taskDTO);
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            TaskDTO createdTask = this.taskService.createUserTask(userId, taskDTO);
-            return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        TaskDTO created = this.taskService.createUserTask(this.userService.getCurrentUserId(), taskDTO);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
-    @GetMapping("/get/{taskId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<TaskDTO> getTask(@PathVariable("taskId") Long taskId) {
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            TaskEntity task = this.taskService.getTask(userId, taskId);
-            TaskDTO taskDTO = new TaskDTO(
-                    task.getId(),
-                    task.getTitle(),
-                    task.getDescription(),
-                    task.getDueDate(),
-                    task.getStatus().name(),
-                    task.getUser().getId()
-            );
-            return new ResponseEntity<>(taskDTO, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        }
+    @PutMapping("/{taskId}")
+    public TaskDTO updateTask(@PathVariable Long taskId, @RequestBody TaskDTO taskDTO) {
+        return this.taskService.updateTask(this.userService.getCurrentUserId(), taskId, taskDTO);
     }
 
-    @PutMapping("/{userId}/update/{taskId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> updateTask (@PathVariable Long taskId, @RequestBody TaskEntity updatedTask) {
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            this.taskService.updateTask(userId, taskId, updatedTask.getTitle(), updatedTask.getDescription(), updatedTask.getStatus());
-            return new ResponseEntity<>("Task updated successfully", HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+    @PatchMapping("/{taskId}/complete")
+    public TaskDTO markTaskCompleted(@PathVariable Long taskId) {
+        return this.taskService.markCompleted(this.userService.getCurrentUserId(), taskId);
     }
 
-    @DeleteMapping("/{userId}/delete/{taskId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> deleteTask (@PathVariable Long taskId) {
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            this.taskService.deleteTaskById(userId, taskId);
-            return new ResponseEntity<>("Task deleted successfully", HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+    @DeleteMapping("/{taskId}")
+    public ResponseEntity<Void> deleteTask(@PathVariable Long taskId) {
+        this.taskService.deleteTask(this.userService.getCurrentUserId(), taskId);
+        return ResponseEntity.noContent().build();
     }
+}
 
-    @PatchMapping("/tasks/{taskId}/complete")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> markTaskCompleted(@PathVariable Long taskId) {
-        try {
-            Long userId = this.getAuthenticatedUserId();
-            this.taskService.markCompleted(taskId, userId);
-            return new ResponseEntity<>("Task marked as completed", HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
+/** Pomocník na parsovanie parametra sort ("pole,asc"). */
+final class PageRequests {
+    private PageRequests() {}
 
-    private Long getAuthenticatedUserId() {
-        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
-        return this.userService.getUserByEmail(email)
-                .map(User::getId)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    static Pageable of(int page, int size, String sort) {
+        String[] sortParams = sort.split(",");
+        String field = sortParams[0].isBlank() ? "id" : sortParams[0];
+        Sort.Direction direction = sortParams.length > 1
+                ? Sort.Direction.fromOptionalString(sortParams[1]).orElse(Sort.Direction.ASC)
+                : Sort.Direction.ASC;
+        return PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(direction, field));
     }
 }

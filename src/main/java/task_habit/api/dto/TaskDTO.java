@@ -1,9 +1,10 @@
 package task_habit.api.dto;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import task_habit.api.model.TaskEntity;
 
-import java.time.Instant;
 import java.util.Date;
 
 @NoArgsConstructor
@@ -14,25 +15,19 @@ public class TaskDTO {
     private String title;
     private String description;
     private Date dueDate;
-    private String status; // Enum ako String
+    private String status; // PENDING | COMPLETED
     private Long userId;
     private String reminderMessage;
 
-    public TaskDTO(Long id, String title, String description, Date dueDate, String status, Long userId) {
-        this.id = id;
-        this.title = title;
-        this.description = description;
-        this.dueDate = dueDate;
-        this.status = status;
-        this.userId = userId;
+    public static TaskDTO fromEntity(TaskEntity task) {
+        return new TaskDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getDueDate(),
+                task.getStatus().name(),
+                task.getUser().getId(),
+                task.getReminderMessage()
+        );
     }
-
-//    public TaskDTO(Long id, String title, String description, Date dueDate, String status, Long userId) {
-//        this.id = id;
-//        this.title = title;
-//        this.description = description;
-//        this.dueDate = dueDate;
-//        this.status = status;
-//        this.userId = userId;
-//    }
 }

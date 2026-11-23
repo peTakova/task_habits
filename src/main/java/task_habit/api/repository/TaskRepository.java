@@ -2,8 +2,8 @@ package task_habit.api.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import task_habit.api.model.TaskEntity;
 import task_habit.api.model.TaskStatus;
 
@@ -17,6 +17,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
     List<TaskEntity> findByUserId(Long userId);
 
     List<TaskEntity> findByStatus(TaskStatus status);
+    long countByUserId(Long userId);
     long countByUserIdAndStatus(Long userId, TaskStatus status);
     Page<TaskEntity> findByUserId(Long userId, Pageable pageable);
     List<TaskEntity> findByUserIdAndStatus(Long userId, TaskStatus status);
