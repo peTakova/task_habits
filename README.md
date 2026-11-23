@@ -1,5 +1,7 @@
 # Task & Habits – backend
 
+Project Task&Habits was created to help people to keep up with their tasks and habits.
+
 REST API for an app that manages tasks and habits. Spring Boot 3.4, Java 21, PostgreSQL, JWT.
 Frontend: [task-habits-frontend](https://github.com/peTakova/task-habits-frontend).
 
@@ -42,6 +44,19 @@ Requirements: Java 21 and a running PostgreSQL with a `task&habits` database
 ```
 
 The API runs on `http://localhost:7010`.
+
+### JWT secret
+
+Tokens are signed with the key from the `JWT_SECRET` environment variable (Base64, at least 32 bytes).
+Without it the server generates a random key on startup – fine for local development, but users are logged out after every restart.
+
+```powershell
+$bytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
+```
+
+Never commit the real key.
 
 > If the project folder name contains `&`, `gradlew.bat` does not work. Use:
 > `java -classpath "gradle\wrapper\gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain bootRun`

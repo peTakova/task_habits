@@ -9,7 +9,14 @@ import java.util.List;
 
 @Entity
 @Data
-@Table(name = "users")
+@Table(
+        name = "users",
+        // Rovnaké názvy ako v existujúcej databáze, aby ich Hibernate nevytváral duplicitne.
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uni_email", columnNames = "email"),
+                @UniqueConstraint(name = "uni_name", columnNames = "username")
+        }
+)
 public class User {
 
     @Id
@@ -17,10 +24,10 @@ public class User {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "username")
+    @Column(name = "username", nullable = false)
     private String username;
 
-    @Column(name = "email")
+    @Column(name = "email", nullable = false)
     private String email;
 
     @NotBlank(message = "Heslo nesmie byť prázdne")

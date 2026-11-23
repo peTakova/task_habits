@@ -163,7 +163,7 @@ public class UserController {
     // ---------------------------------------------------------------- cookies
 
     private void writeAuthCookies(User user, HttpServletResponse response) {
-        String token = this.jwtUtil.generateToken(Map.of("userId", user.getId()), user.getEmail());
+        String token = this.jwtUtil.generateToken(user.getId(), user.getEmail());
         Duration maxAge = Duration.ofMillis(JwtUtil.JWT_EXPIRATION_MS);
         response.addHeader(HttpHeaders.SET_COOKIE, buildCookie(JwtRequestFilter.AUTH_COOKIE, token, maxAge, true));
         response.addHeader(HttpHeaders.SET_COOKIE, buildCookie(USER_ID_COOKIE, user.getId().toString(), maxAge, false));
