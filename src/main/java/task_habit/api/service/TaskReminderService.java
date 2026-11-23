@@ -1,7 +1,7 @@
 package task_habit.api.service;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -9,62 +9,52 @@ import task_habit.api.model.TaskEntity;
 import task_habit.api.model.TaskStatus;
 import task_habit.api.repository.TaskRepository;
 
-import java.time.LocalDateTime;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Každých 10 minút nastaví pripomienku úlohám, ktorých termín je do 24 hodín.
+ */
 @Service
 @EnableScheduling
 public class TaskReminderService {
-    private final TaskRepository taskRepository;
-    private final JavaMailSender mailSender;
 
-    @Autowired
-    public TaskReminderService(TaskRepository taskRepository, JavaMailSender mailSender) {
+    private static final Logger log = LoggerFactory.getLogger(TaskReminderService.class);
+
+    /** Stĺpec reminder_message má 255 znakov. */
+    static final int MAX_MESSAGE_LENGTH = 255;
+    private static final int MAX_TITLE_LENGTH = 150;
+    private static final long DAY_MS = 24L * 60 * 60 * 1000;
+
+    private final TaskRepository taskRepository;
+
+    public TaskReminderService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
-        this.mailSender = mailSender;
     }
 
-    @Scheduled(fixedRate = 3600000)
-    public void sendTaskReminders() {
+    @Scheduled(fixedRate = 600000)
+    public void generateTaskReminders() {
         Date now = new Date();
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(now);
-        calendar.add(Calendar.DAY_OF_YEAR, 1);
-        Date tomorrow = calendar.getTime();
+        Date tomorrow = new Date(now.getTime() + DAY_MS);
 
-        List<TaskEntity> tasks = this.taskRepository.findAllByDueDateBetweenAndStatusNot(
-                this.adjustTime(tomorrow, -1),
-                this.adjustTime(tomorrow, 1),
-                TaskStatus.COMPLETED
-        );
-
+        List<TaskEntity> tasks = this.taskRepository.findAllByDueDateBetweenAndStatusNot(now, tomorrow, TaskStatus.COMPLETED);
         for (TaskEntity task : tasks) {
-            if (task.getDueDate().after(now) && task.getDueDate().before(adjustTime(tomorrow, 1))) {
-                this.sendReminderEmail(task);
+            try {
+                // Mení sa len stĺpec s pripomienkou a len ak sa úloha medzitým nezmenila.
+                this.taskRepository.setReminderIfStillDue(task.getId(), task.getDueDate(), buildMessage(task), TaskStatus.COMPLETED);
+            } catch (RuntimeException e) {
+                // Chyba pri jednej úlohe nesmie zastaviť pripomienky pre ostatné.
+                log.warn("Pripomienku pre úlohu {} sa nepodarilo uložiť: {}", task.getId(), e.getMessage());
             }
         }
     }
 
-    private void sendReminderEmail(TaskEntity task) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(task.getUser().getEmail());
-        message.setSubject("Pripomenutie úlohy: " + task.getTitle());
-        message.setText("Ahoj " + task.getUser().getUsername() + ",\n\n" +
-                "Pripomíname ti úlohu '" + task.getTitle() + "', ktorá má termín zajtra.\n" +
-                "Popis: " + (task.getDescription() != null ? task.getDescription() : "Žiadny") + "\n" +
-                "Termín: " + task.getDueDate() + "\n\n" +
-                "Nezabudni ju dokončiť!\n\n" +
-                "Tvoj TaskHabit tím");
-
-        this.mailSender.send(message);
-    }
-
-    private Date adjustTime(Date date, int hours) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
-        cal.add(Calendar.HOUR_OF_DAY, hours);
-        return cal.getTime();
+    static String buildMessage(TaskEntity task) {
+        String title = task.getTitle() == null ? "" : task.getTitle().strip();
+        if (title.length() > MAX_TITLE_LENGTH) {
+            title = title.substring(0, MAX_TITLE_LENGTH - 1) + "…";
+        }
+        String message = "Upozornenie: úloha „" + title + "“ má termín do 24 hodín. Dokonči ju čím skôr!";
+        return message.length() > MAX_MESSAGE_LENGTH ? message.substring(0, MAX_MESSAGE_LENGTH) : message;
     }
 }

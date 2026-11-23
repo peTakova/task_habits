@@ -24,6 +24,9 @@ public class TaskEntity {
     @Column(name = "dueDate")
     private Date dueDate;
 
+    @Column(name = "reminder_message")
+    private String reminderMessage;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TaskStatus status = TaskStatus.PENDING;

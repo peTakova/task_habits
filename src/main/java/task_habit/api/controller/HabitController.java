@@ -1,122 +1,75 @@
 package task_habit.api.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import task_habit.api.dto.HabitDTO;
-import task_habit.api.model.HabitEntity;
 import task_habit.api.service.HabitService;
+import task_habit.api.service.UserService;
 
 import java.util.List;
 
+/**
+ * Návyky prihláseného používateľa.
+ *
+ * GET    /habit                – všetky návyky
+ * GET    /habit/page           – stránkovanie (?page, size, sort=pole,asc|desc)
+ * GET    /habit/{id}           – detail
+ * POST   /habit                – vytvorenie
+ * PUT    /habit/{id}           – úprava (name, description, frequency)
+ * PATCH  /habit/{id}/complete  – splnené dnes
+ * DELETE /habit/{id}           – zmazanie
+ */
 @RestController
 @RequestMapping("/habit")
 public class HabitController {
 
-    @Autowired
-    private HabitService habitService;
+    private final HabitService habitService;
+    private final UserService userService;
 
-    @GetMapping("/habits")
-    public ResponseEntity<List<HabitDTO>> getAllUserHabits() {
-        try {
-            List<HabitDTO> tasks = this.habitService.getUserHabits();
-            if (tasks.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            }
-            return new ResponseEntity<>(tasks, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public HabitController(HabitService habitService, UserService userService) {
+        this.habitService = habitService;
+        this.userService = userService;
     }
 
-    @GetMapping("/all")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<HabitDTO>> getAllHabits(
+    @GetMapping
+    public List<HabitDTO> getAllUserHabits() {
+        return this.habitService.getUserHabits(this.userService.getCurrentUserId());
+    }
+
+    @GetMapping("/page")
+    public Page<HabitDTO> getHabitsPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id,asc") String sort) {
-        try {
-            String[] sortParams = sort.split(",");
-            String sortField = sortParams[0];
-            Sort.Direction sortDirection = Sort.Direction.fromString(sortParams[1]);
-
-            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
-            Page<HabitDTO> habitsPage = this.habitService.getAllTasksPageable(pageable);
-
-            return new ResponseEntity<>(habitsPage, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return this.habitService.getUserHabitsPageable(this.userService.getCurrentUserId(), PageRequests.of(page, size, sort));
     }
 
-    @PostMapping("/{userId}/create")
-    public ResponseEntity<HabitDTO> createHabit(@PathVariable Long userId, @RequestBody HabitDTO habitDTO) {
-        try {
-            HabitDTO createdHabit = this.habitService.createUserHabit(userId, habitDTO);
-            return new ResponseEntity<>(createdHabit, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    @GetMapping("/{habitId}")
+    public HabitDTO getHabit(@PathVariable Long habitId) {
+        return this.habitService.getHabit(this.userService.getCurrentUserId(), habitId);
     }
 
-    @GetMapping("/{usersId}/get/{habitId}")
-    public ResponseEntity<HabitDTO> getHabit(@PathVariable Long usersId, @PathVariable Long habitId) {
-        try {
-            HabitEntity habit = this.habitService.getHabit(usersId, habitId);
-            HabitDTO habitDTO = new HabitDTO(
-                    habit.getId(),
-                    habit.getName(),
-                    habit.getDescription(),
-                    habit.getFrequency(),
-                    habit.getLastCompletedDate(),
-                    habit.getUser().getId()
-            );
-            return new ResponseEntity<>(habitDTO, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-        }
+    @PostMapping
+    public ResponseEntity<HabitDTO> createHabit(@RequestBody HabitDTO habitDTO) {
+        HabitDTO created = this.habitService.createUserHabit(this.userService.getCurrentUserId(), habitDTO);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
-    @PutMapping("/{userId}/update/{habitId}")
-    public ResponseEntity<String> updateHabit (@PathVariable Long userId, @PathVariable Long habitId, @RequestBody HabitEntity updatedHabit) {
-        try {
-            this.habitService.updateHabit(userId, habitId, updatedHabit.getName(),updatedHabit.getDescription(),  updatedHabit.getFrequency());
-            return new ResponseEntity<>("Task updated successfully", HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+    @PutMapping("/{habitId}")
+    public HabitDTO updateHabit(@PathVariable Long habitId, @RequestBody HabitDTO habitDTO) {
+        return this.habitService.updateHabit(this.userService.getCurrentUserId(), habitId, habitDTO);
     }
 
-
-    @DeleteMapping("/{userId}/delete/{habitId}")
-    public ResponseEntity<String> deleteHabit (@PathVariable Long userId, @PathVariable Long habitId) {
-        try {
-            this.habitService.deleteHabitById(userId, habitId);
-            return new ResponseEntity<>("Task deleted successfully", HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-
+    @PatchMapping("/{habitId}/complete")
+    public HabitDTO markHabitCompleted(@PathVariable Long habitId) {
+        return this.habitService.markCompletedToday(this.userService.getCurrentUserId(), habitId);
     }
 
-    @PatchMapping("/{userId}/habit/{taskId}/complete")
-    public ResponseEntity<String> markHabitCompleted(@PathVariable Long userId, @PathVariable Long taskId) {
-        try {
-            this.habitService.markCompletedToday(userId, taskId);
-            return new ResponseEntity<>("Task marked as completed", HttpStatus.ACCEPTED);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+    @DeleteMapping("/{habitId}")
+    public ResponseEntity<Void> deleteHabit(@PathVariable Long habitId) {
+        this.habitService.deleteHabit(this.userService.getCurrentUserId(), habitId);
+        return ResponseEntity.noContent().build();
     }
-
 }
